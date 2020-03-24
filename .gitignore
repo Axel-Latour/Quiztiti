@@ -1,0 +1,5 @@
+#IntelliJ settings
+/.idea
+
+#Project modules
+/node_modules
