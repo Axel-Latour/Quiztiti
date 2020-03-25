@@ -1,30 +1,34 @@
 const Telegraf = require('telegraf');
-// const express = require('express');
-// const axios = require('axios');
+const { Markup } = Telegraf;
+const axios = require('axios');
 
 const bot = new Telegraf("1132298501:AAHW-k5TMwYISexLi3DyN0YTHBzDwxd3oW8");
-// const app = express();
 
-bot.on('text', ctx => {
-  return ctx.reply(ctx.message.text);
+const express = require('express');
+const app = express();
+
+app.listen(3000, () => {
+  console.log(`I'm ready !`);
 });
-//
-// app.get('/questions', (req, res) => {
-//   const generateQuestionsUrl = (req) => {
-//     return `https://opentdb.com/api.php?amount=10`;
-//   };
-//
-//   axios({
-//     method: 'get',
-//     url: generateQuestionsUrl(req)
-//   }).then(({ data: { results } }) => {
-//     res.send(results);
-//     console.log(results);
-//   }, error => console.log(error));
-// });
-//
-// app.listen(33333, () => {
-//   console.log('Quiztiti is running !');
-// });
+
+app.get('/test', (req, res) => {
+})
+
+let currentStatus;
+
+bot.command('start', (ctx) => {
+  currentStatus = GameStatus.CHOOSING_CATEGORY;
+  return ctx.reply(
+    `Quiztitiiiiiiiiii ! Starting a new game ! Please, choose your category.`,
+    Markup.keyboard((constructCategoriesList())).oneTime().resize().extra()
+  );
+});
+
+bot.on('text', (ctx) => {
+  const message = ctx.message.text;
+  if (currentStatus === GameStatus.CHOOSING_CATEGORY && playedCategories[message]) {
+    return ctx.reply(`You choose ${playedCategories[message]} ! Good luck !`);
+  }
+});
 
 bot.startPolling();

@@ -3,3 +3,6 @@
 
 #Project modules
 /node_modules
+
+#Build
+/dist
