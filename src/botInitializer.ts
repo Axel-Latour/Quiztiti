@@ -1,6 +1,6 @@
-import { constructCategoriesList } from './buttonGenerator';
-import { resetGame } from './index';
 import { ContextMessageUpdate, Extra, Markup } from 'telegraf';
+import { constructCategoriesList } from './buttonGenerator';
+import { resetGame, stopGame } from './index';
 
 export const initializeBot = (bot) => {
   bot.command('start', (ctx) => {
@@ -17,7 +17,7 @@ export const initializeBot = (bot) => {
   });
 
   bot.command('stop', (ctx: ContextMessageUpdate) => {
-    return ctx.reply('Okay... Please, come back quick ! Bye !', Markup.removeKeyboard().extra());
+    stopGame(ctx);
   });
 
   bot.startPolling();

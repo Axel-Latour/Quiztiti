@@ -1,7 +1,6 @@
-import axios from 'axios';
 import Telegraf, { ContextMessageUpdate, Extra, Markup } from 'telegraf';
 import { initializeBot } from './botInitializer';
-import { checkIfCategoryExists, checkIfRoundIsValid, generateRoundButtons, INFINITE_ROUNDS, playedCategories } from './buttonGenerator';
+import { checkIfCategoryExists, checkIfRoundIsValid, generateRoundButtons, INFINITE_ROUNDS } from './buttonGenerator';
 import { AnswerStatus } from './models/AnswerStatus';
 import { Game } from './models/Game';
 import { GameStatus } from './models/GameStatus';
@@ -67,7 +66,7 @@ export const resetGame = () => {
   }
 };
 
-const stopGame = (ctx: ContextMessageUpdate) => {
+export const stopGame = (ctx: ContextMessageUpdate) => {
   ctx.reply("Quiz is over ! Thanks for playing this awesome bot made by real professional !", Markup.removeKeyboard().extra());
   resetGame();
 };
@@ -83,7 +82,7 @@ const sendAnswerAndNetxQuestion = (ctx: ContextMessageUpdate, success: boolean) 
   if (hintTimer) {
     clearInterval(hintTimer);
   }
-  setTimeout(() => sendNextQuestion(ctx), 10000);
+  setTimeout(() => sendNextQuestion(ctx), 5000);
 };
 
 const sendNextQuestion = (ctx: ContextMessageUpdate) => {
@@ -110,19 +109,12 @@ const sendHint = (ctx: ContextMessageUpdate) => {
 };
 
 const fetchQuestions = (ctx: ContextMessageUpdate) => {
-  axios({
-    method: 'get',
-    url: constructQuizDatabaseUrl()
-  }).then(response => {
-    game.questions = response.data.results.map(({ question, correct_answer }) => new Question(question, correct_answer));
-    console.log(game.questions);
-    game.status = GameStatus.PLAYING;
-    sendNextQuestion(ctx);
-  }, error => console.log(error));
-};
-
-const constructQuizDatabaseUrl = (): string => {
-  return `https://opentdb.com/api.php?amount=${game.numberOfRounds}&category=${playedCategories[game.category] || ''}&type=multiple`;
+  const questions: Question[] = JSON.parse(fs.readFileSync('src/assets/database.json', 'utf8')).questions;
+  const randomIndex: number = Math.floor(Math.random() * (questions.length - game.numberOfRounds));
+  game.questions = questions.slice(randomIndex, randomIndex + game.numberOfRounds);
+  console.log(game.questions);
+  game.status = GameStatus.PLAYING;
+  sendNextQuestion(ctx);
 };
 
 const closeKeyboard = (ctx: ContextMessageUpdate, message: string) => {
