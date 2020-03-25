@@ -12,7 +12,7 @@ bot.on('text', ctx => {
   return ctx.reply(ctx.message.text);
 });
 
-app.post('/checkAnswer', (req, res) => {
+app.post('/message', (req, res) => {
   console.log(req.body);
 });
 
