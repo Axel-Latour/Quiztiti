@@ -1,0 +1,6 @@
+export enum GameStatus {
+  CHOOSING_CATEGORY,
+  CHOOSING_ROUND,
+  PLAYING,
+  WAITING,
+}
