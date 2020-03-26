@@ -1,6 +1,7 @@
 import Telegraf, { ContextMessageUpdate, Extra, Markup } from 'telegraf';
 import { initializeBot } from './BotInitializer';
 import { checkIfCategoryExists, checkIfRoundIsValid, constructCategoriesList, generateRoundButtons } from './ButtonGenerator';
+import { fillSecretsWithLetters, replaceCharactersBySecret } from './HintHelper';
 import { AnswerStatus } from './models/AnswerStatus';
 import { Question } from './models/Question';
 import { Quiz } from './models/Quiz';
@@ -9,7 +10,7 @@ import { fetchQuestionsFromDatabase, generateQuizQuestions, normalizeAnswer } fr
 
 const bot = new Telegraf('1132298501:AAHW-k5TMwYISexLi3DyN0YTHBzDwxd3oW8');
 
-let hintTimer;
+let hintTimer, nextQuestionTimer;
 let quiz: Quiz = new Quiz();
 
 export const questionsDatabase: Question[] = fetchQuestionsFromDatabase();
@@ -30,7 +31,7 @@ export const handleMessage = (ctx: ContextMessageUpdate) => {
     case QuizStatus.WAITING:
       break;
     default:
-      ctx.reply('There must be an error on the Quiz');
+      ctx.reply('There must be an error on the QuizStatus');
       break;
   }
 };
@@ -72,7 +73,7 @@ const onRoundChoice = (ctx: ContextMessageUpdate) => {
   if (checkIfRoundIsValid(ctx.message.text)) {
     quiz.numberOfRounds = parseInt(ctx.message.text);
     closeKeyboard(ctx, `${ctx.message.text} rounds : Let the Quiz begin !`);
-    startQuiz(ctx);
+    setTimeout(() => startQuiz(ctx), 3000);
   }
 };
 
@@ -89,10 +90,13 @@ export const resetQuiz = () => {
   if (hintTimer) {
     clearInterval(hintTimer);
   }
+  if (nextQuestionTimer) {
+    clearTimeout(nextQuestionTimer);
+  }
 };
 
 export const stopQuiz = (ctx: ContextMessageUpdate) => {
-  ctx.reply("Quiz is over ! Thanks for playing this awesome bot made by real professional !", Markup.removeKeyboard().extra());
+  ctx.reply('Quiz is over ! Thanks for playing this awesome bot made by real professional !', Markup.removeKeyboard().extra());
   resetQuiz();
 };
 
@@ -103,22 +107,37 @@ const checkAnswer = (ctx: ContextMessageUpdate) => {
 };
 
 const sendAnswerAndNextQuestion = (ctx: ContextMessageUpdate, success: boolean) => {
-  ctx.reply(`${success ? 'Well done ' : 'Better luck next time '} ! The answer was : ${quiz.currentQuestion.answer}`);
+  ctx.replyWithHTML(`${success ? 'Well done ' : 'Better luck next time '} ! The answer was : \n${quiz.currentQuestion.answer}`);
   if (hintTimer) {
     clearInterval(hintTimer);
   }
-  setTimeout(() => sendNextQuestion(ctx), 5000);
+  nextQuestionTimer = setTimeout(() => sendNextQuestion(ctx), 5000);
 };
 
 const sendNextQuestion = (ctx: ContextMessageUpdate) => {
   quiz.answerStatus = AnswerStatus.INVISIBLE;
-  if (quiz.numberOfRounds === -1 || quiz.currentRound <= quiz.numberOfRounds) {
-    quiz.currentQuestion = quiz.questions[quiz.currentRound - 1];
-    ctx.replyWithHTML(quiz.currentQuestion.question);
+  if (quiz.currentRound <= quiz.numberOfRounds - 1) {
+    quiz.currentQuestion = quiz.questions[quiz.currentRound];
+    ctx.replyWithHTML(`<b>quiz.currentQuestion.question</b>`);
     quiz.currentRound++;
     sendHint(ctx);
   } else {
     stopQuiz(ctx);
+  }
+};
+
+const generateHint = (ctx: ContextMessageUpdate) => {
+  switch (quiz.answerStatus) {
+    case AnswerStatus.INVISIBLE:
+      replaceCharactersBySecret(quiz.currentQuestion);
+      break;
+    case AnswerStatus.VISIBLE:
+    case AnswerStatus.FIRST_FILL:
+      fillSecretsWithLetters(quiz.currentQuestion);
+      break;
+    default:
+      ctx.reply('There must be an error on the AnswerStatus');
+      break;
   }
 };
 
@@ -127,12 +146,15 @@ const sendHint = (ctx: ContextMessageUpdate) => {
     if (quiz.answerStatus === AnswerStatus.SECOND_FILL) {
       sendAnswerAndNextQuestion(ctx, false);
     } else {
+      generateHint(ctx);
       ctx.replyWithHTML(
-        `<b>${quiz.currentQuestion.question}</b>\n`
+        `Round ${quiz.currentRound}/${quiz.numberOfRounds}\n
+<b>${quiz.currentQuestion.question}</b>\n
+<i>${quiz.currentQuestion.hint}</i>`
       );
       quiz.answerStatus = quiz.answerStatus + 1;
     }
-  }, 10000);
+  }, 1000);
 };
 
 const closeKeyboard = (ctx: ContextMessageUpdate, message: string) => {

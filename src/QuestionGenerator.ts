@@ -6,19 +6,26 @@ const fs = require('fs');
 export const fetchQuestionsFromDatabase = (): Question[] => {
   const databaseContent: string = fs.readFileSync('src/assets/database.json', 'utf8');
   if (databaseContent) {
-    const questions: Question[] = JSON.parse(databaseContent)?.questions;
-    // Normalize the answer to avoid accent issues when answering questions
-    questions.forEach(question => {
+    const usableQuestions: Question[] = JSON.parse(databaseContent)?.questions.filter(question => question.theme !== 'Anagramme');
+    usableQuestions.forEach(question => {
+      // Normalize the answer to avoid accent issues when answering questions
+      question.answer = question.answer.replace('-', ' ');
       question.normalizedAnswer = normalizeAnswer(question.answer);
     });
-    return questions;
+    return usableQuestions;
   }
   return [];
 };
 
 export const generateQuizQuestions = (questionsDatabase: Question[], quiz: Quiz): Question[] => {
-  const randomIndex: number = Math.floor(Math.random() * (questionsDatabase.length - quiz.numberOfRounds));
-  return questionsDatabase.slice(randomIndex, randomIndex + quiz.numberOfRounds);
+  const questions: Question[] = [];
+  let randomIndex: number;
+
+  for (let i = 0; i < quiz.numberOfRounds; i++) {
+    randomIndex = Math.floor(Math.random() * (questionsDatabase.length));
+    questions.push(questionsDatabase[randomIndex]);
+  }
+  return questions;
 };
 
 export const normalizeAnswer = (answer: string): string => {
