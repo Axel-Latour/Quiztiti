@@ -3,17 +3,17 @@ import { handleMessage, resetQuiz, sendRoundChoiceMessage, stopQuiz } from './in
 
 export const initializeBot = (bot) => {
   bot.command('start', (ctx) => {
-    console.log('coucou');
+    console.log('start command has been triggered');
     resetQuiz();
     sendRoundChoiceMessage(ctx, '');
   });
 
   bot.command('stop', (ctx: ContextMessageUpdate) => {
+    console.log('stop command has been triggered');
     stopQuiz(ctx);
   });
 
   bot.on('text', (ctx: ContextMessageUpdate) => {
-    console.log(ctx);
     handleMessage(ctx);
   });
 
