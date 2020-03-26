@@ -72,7 +72,7 @@ const onCategoryChoice = (ctx: ContextMessageUpdate) => {
 
 const onRoundChoice = (ctx: ContextMessageUpdate) => {
   if (checkIfRoundIsValid(ctx.message.text)) {
-    quiz.numberOfRounds = 1;//parseInt(ctx.message.text);
+    quiz.numberOfRounds = parseInt(ctx.message.text);
     closeKeyboard(ctx, `${ctx.message.text} rounds : Let the Quiz begin !`);
     setTimeout(() => startQuiz(ctx), 3000);
   }
