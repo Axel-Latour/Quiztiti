@@ -98,11 +98,11 @@ export const resetQuiz = () => {
 
 export const stopQuiz = (ctx: ContextMessageUpdate) => {
   let scoreMessage: string = '';
-  const sortedPlayers = Object.keys(globalScore).sort((a, b) => globalScore[a] - globalScore[b]);
+  const sortedPlayers = Object.keys(globalScore).sort((a, b) => globalScore[b] - globalScore[a]);
   sortedPlayers.forEach(name => {
     scoreMessage += `${name} : ${globalScore[name]} point(s)\n`;
   });
-  ctx.replyWithHTML(`Quiz is over ! Thanks for playing this awesome bot made by real professional !\n\n${scoreMessage}`, Markup.removeKeyboard().extra());
+  ctx.replyWithHTML(`<b>Quiz is over ! Thanks for playing this awesome bot made by real professional !</b>\n\n${scoreMessage}`, Markup.removeKeyboard().extra());
   resetQuiz();
 };
 
@@ -113,6 +113,7 @@ const checkAnswer = (ctx: ContextMessageUpdate) => {
 };
 
 const sendAnswerAndNextQuestion = (ctx: ContextMessageUpdate, success: boolean) => {
+  quiz.status = QuizStatus.WAITING;
   if (success) {
     handleSuccessMessage(ctx);
   } else {
@@ -148,6 +149,7 @@ const handleSuccessMessage = (ctx: ContextMessageUpdate) => {
 };
 
 const sendNextQuestion = (ctx: ContextMessageUpdate) => {
+  quiz.status = QuizStatus.PLAYING;
   quiz.answerStatus = AnswerStatus.INVISIBLE;
   if (quiz.currentRound <= quiz.numberOfRounds - 1) {
     quiz.currentQuestion = quiz.questions[quiz.currentRound];

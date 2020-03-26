@@ -3,6 +3,7 @@ import { handleMessage, resetQuiz, sendRoundChoiceMessage, stopQuiz } from './in
 
 export const initializeBot = (bot) => {
   bot.command('start', (ctx) => {
+    console.log('coucou');
     resetQuiz();
     sendRoundChoiceMessage(ctx, '');
   });
@@ -12,6 +13,7 @@ export const initializeBot = (bot) => {
   });
 
   bot.on('text', (ctx: ContextMessageUpdate) => {
+    console.log(ctx);
     handleMessage(ctx);
   });
 
