@@ -191,7 +191,7 @@ Theme : ${quiz.currentQuestion.theme}\n
       );
       quiz.answerStatus = quiz.answerStatus + 1;
     }
-  }, 10000);
+  }, 20000);
 };
 
 const closeKeyboard = (ctx: ContextMessageUpdate, message: string) => {
