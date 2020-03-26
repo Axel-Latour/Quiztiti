@@ -153,7 +153,8 @@ const sendNextQuestion = (ctx: ContextMessageUpdate) => {
   quiz.answerStatus = AnswerStatus.INVISIBLE;
   if (quiz.currentRound <= quiz.numberOfRounds - 1) {
     quiz.currentQuestion = quiz.questions[quiz.currentRound];
-    ctx.replyWithHTML(`<b>${quiz.currentQuestion.question}</b>`);
+    ctx.replyWithHTML(`Theme : ${quiz.currentQuestion.theme}\n
+<b>${quiz.currentQuestion.question}</b>`);
     quiz.currentRound++;
     sendHint(ctx);
   } else {
@@ -184,6 +185,7 @@ const sendHint = (ctx: ContextMessageUpdate) => {
       generateHint(ctx);
       ctx.replyWithHTML(
         `Round ${quiz.currentRound}/${quiz.numberOfRounds}\n
+Theme : ${quiz.currentQuestion.theme}\n
 <b>${quiz.currentQuestion.question}</b>\n
 <i>${quiz.currentQuestion.hint}</i>`
       );
