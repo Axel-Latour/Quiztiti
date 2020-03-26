@@ -1,4 +1,4 @@
-export enum GameStatus {
+export enum QuizStatus {
   CHOOSING_CATEGORY,
   CHOOSING_ROUND,
   PLAYING,

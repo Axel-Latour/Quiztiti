@@ -1,6 +1,5 @@
-export const INFINITE_ROUNDS = 'Infinite';
 export const ALL_CATEGORIES = 'All';
-export const playedCategories = {
+const playedCategories = {
   'Movies': 11,
   'Music': 12,
   'Video Games': 15,
@@ -30,10 +29,9 @@ export const generateRoundButtons = () => {
   return [
     ['10', '20'],
     ['30', '50'],
-    [INFINITE_ROUNDS]
   ];
 };
 
 export const checkIfRoundIsValid = (round: string) => {
-  return ['10', '20', '30', '50', INFINITE_ROUNDS].includes(round);
+  return ['10', '20', '30', '50'].includes(round);
 };

@@ -1,9 +1,9 @@
 import { AnswerStatus } from './AnswerStatus';
-import { GameStatus } from './GameStatus';
 import { Question } from './Question';
+import { QuizStatus } from './QuizStatus';
 
-export class Game {
-  status: GameStatus = GameStatus.CHOOSING_CATEGORY;
+export class Quiz {
+  status: QuizStatus = QuizStatus.CHOOSING_ROUND;
   category: string;
   numberOfRounds: number;
   currentRound: number = 1;
