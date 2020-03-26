@@ -12,6 +12,7 @@ const bot = new Telegraf('1132298501:AAHW-k5TMwYISexLi3DyN0YTHBzDwxd3oW8');
 
 let hintTimer, nextQuestionTimer;
 let quiz: Quiz = new Quiz();
+let globalScore: { [key: string]: number } = {};
 
 export const questionsDatabase: Question[] = fetchQuestionsFromDatabase();
 
@@ -71,7 +72,7 @@ const onCategoryChoice = (ctx: ContextMessageUpdate) => {
 
 const onRoundChoice = (ctx: ContextMessageUpdate) => {
   if (checkIfRoundIsValid(ctx.message.text)) {
-    quiz.numberOfRounds = parseInt(ctx.message.text);
+    quiz.numberOfRounds = 1;//parseInt(ctx.message.text);
     closeKeyboard(ctx, `${ctx.message.text} rounds : Let the Quiz begin !`);
     setTimeout(() => startQuiz(ctx), 3000);
   }
@@ -96,7 +97,12 @@ export const resetQuiz = () => {
 };
 
 export const stopQuiz = (ctx: ContextMessageUpdate) => {
-  ctx.reply('Quiz is over ! Thanks for playing this awesome bot made by real professional !', Markup.removeKeyboard().extra());
+  let scoreMessage: string = '';
+  const sortedPlayers = Object.keys(globalScore).sort((a, b) => globalScore[a] - globalScore[b]);
+  sortedPlayers.forEach(name => {
+    scoreMessage += `${name} : ${globalScore[name]} point(s)\n`;
+  });
+  ctx.replyWithHTML(`Quiz is over ! Thanks for playing this awesome bot made by real professional !\n\n${scoreMessage}`, Markup.removeKeyboard().extra());
   resetQuiz();
 };
 
@@ -107,18 +113,45 @@ const checkAnswer = (ctx: ContextMessageUpdate) => {
 };
 
 const sendAnswerAndNextQuestion = (ctx: ContextMessageUpdate, success: boolean) => {
-  ctx.replyWithHTML(`${success ? 'Well done ' : 'Better luck next time '} ! The answer was : \n${quiz.currentQuestion.answer}`);
+  if (success) {
+    handleSuccessMessage(ctx);
+  } else {
+    ctx.replyWithHTML(`Better luck next time ! The answer was :\n${quiz.currentQuestion.answer}\n`);
+  }
   if (hintTimer) {
     clearInterval(hintTimer);
   }
   nextQuestionTimer = setTimeout(() => sendNextQuestion(ctx), 5000);
 };
 
+const handleSuccessMessage = (ctx: ContextMessageUpdate) => {
+  let score: number;
+  switch (quiz.answerStatus) {
+    case AnswerStatus.INVISIBLE:
+      score = 5;
+      break;
+    case AnswerStatus.VISIBLE:
+      score = 3;
+      break;
+    case AnswerStatus.FIRST_FILL:
+      score = 2;
+      break;
+    case AnswerStatus.SECOND_FILL:
+      score = 1;
+      break;
+  }
+  if (!globalScore[ctx.message.from.first_name]) {
+    globalScore[ctx.message.from.first_name] = 0;
+  }
+  globalScore[ctx.message.from.first_name] = globalScore[ctx.message.from.first_name] + score;
+  ctx.reply(`Well done ! The answer was : \n${quiz.currentQuestion.answer}\n\n${ctx.message.from.first_name} won ${score} point(s) !`);
+};
+
 const sendNextQuestion = (ctx: ContextMessageUpdate) => {
   quiz.answerStatus = AnswerStatus.INVISIBLE;
   if (quiz.currentRound <= quiz.numberOfRounds - 1) {
     quiz.currentQuestion = quiz.questions[quiz.currentRound];
-    ctx.replyWithHTML(`<b>quiz.currentQuestion.question</b>`);
+    ctx.replyWithHTML(`<b>${quiz.currentQuestion.question}</b>`);
     quiz.currentRound++;
     sendHint(ctx);
   } else {
@@ -154,7 +187,7 @@ const sendHint = (ctx: ContextMessageUpdate) => {
       );
       quiz.answerStatus = quiz.answerStatus + 1;
     }
-  }, 1000);
+  }, 10000);
 };
 
 const closeKeyboard = (ctx: ContextMessageUpdate, message: string) => {
