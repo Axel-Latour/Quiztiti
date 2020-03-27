@@ -88,6 +88,7 @@ const startQuiz = (ctx: ContextMessageUpdate) => {
 
 export const resetQuiz = () => {
   quiz = new Quiz();
+  globalScore = {};
   if (hintTimer) {
     clearInterval(hintTimer);
   }
