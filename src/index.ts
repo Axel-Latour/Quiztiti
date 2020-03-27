@@ -1,132 +1,138 @@
-import Telegraf, { ContextMessageUpdate, Extra, Markup } from 'telegraf';
+const Telegraf = require('telegraf');
+import { Markup } from 'telegraf';
 import { initializeBot } from './BotInitializer';
-import { checkIfCategoryExists, checkIfRoundIsValid, constructCategoriesList, generateRoundButtons } from './ButtonGenerator';
+import { checkIfCategoryExists, checkIfRoundIsValid, INFINITE_ROUND } from './ButtonGenerator';
 import { fillSecretsWithLetters, replaceCharactersBySecret } from './HintHelper';
+import { getEndOfQuizMessage, getPartyBeginsMessage, getQuestionMessage } from './MessageHelper';
 import { AnswerStatus } from './models/AnswerStatus';
 import { Question } from './models/Question';
 import { Quiz } from './models/Quiz';
 import { QuizStatus } from './models/QuizStatus';
-import { fetchQuestionsFromDatabase, generateQuizQuestions, normalizeAnswer } from './QuestionGenerator';
+import { fetchQuestionsFromDatabase, getRandomQuestion } from './QuestionGenerator';
+import { QuiztitiContext } from './QuiztitiContext';
+import { normalizeText, removeNonAlphanumericCharacters } from './utils';
 
-const bot = new Telegraf('1132298501:AAHW-k5TMwYISexLi3DyN0YTHBzDwxd3oW8');
+const bot = new Telegraf('1132298501:AAHW-k5TMwYISexLi3DyN0YTHBzDwxd3oW8', { contextType: QuiztitiContext });
+
+const questionsDatabase: Question[] = fetchQuestionsFromDatabase();
+
+initializeBot(bot);
 
 let hintTimer, nextQuestionTimer;
 let quiz: Quiz = new Quiz();
 let globalScore: { [key: string]: number } = {};
 
-export const questionsDatabase: Question[] = fetchQuestionsFromDatabase();
-
-initializeBot(bot);
-
-export const handleMessage = (ctx: ContextMessageUpdate) => {
-  switch (quiz.status) {
-    case QuizStatus.CHOOSING_CATEGORY:
-      onCategoryChoice(ctx);
-      break;
-    case QuizStatus.CHOOSING_ROUND:
-      onRoundChoice(ctx);
-      break;
-    case QuizStatus.PLAYING:
-      checkAnswer(ctx);
-      break;
-    case QuizStatus.WAITING:
-      break;
-    default:
-      ctx.reply('There must be an error on the QuizStatus');
-      break;
+/**
+ * Triggered on all messages received from Telegram.
+ * Only treat them when the quiz is playing, to avoid bad interpretations
+ * @param ctx
+ */
+export const handleMessage = (ctx: QuiztitiContext) => {
+  if (quiz.status === QuizStatus.PLAYING) {
+    checkAnswer(ctx);
   }
 };
 
-export const sendCategoryChoiceMessage = (ctx: ContextMessageUpdate) => {
-  ctx.reply(
-    `Quiztitiiiiiiiiii ! Starting a new game ! Please, choose your category : `,
-    Extra
-      .inReplyTo(ctx.message.message_id)
-      .markup(Markup
-        .keyboard(constructCategoriesList())
-        .oneTime()
-        .resize())
-  );
+/**
+ * Triggered for the category choice
+ * @param ctx
+ */
+export const sendCategoryChoiceMessage = (ctx: QuiztitiContext) => {
+  ctx.replyWithCategoryChoice();
 };
 
-export const sendRoundChoiceMessage = (ctx: ContextMessageUpdate, category: string) => {
-  ctx.reply(`You choose ${category}. Now choose the number of rounds : `,
-    Extra
-      .inReplyTo(ctx.message.message_id)
-      .markup(Markup
-        .keyboard(generateRoundButtons())
-        .oneTime()
-        .resize()
-      ));
+/**
+ * Triggered for the round choice
+ * @param ctx
+ */
+const sendRoundChoiceMessage = (ctx: QuiztitiContext) => {
+  ctx.replyWithRoundChoice(ctx.message.text);
   quiz.status = QuizStatus.CHOOSING_ROUND;
 };
 
-const onCategoryChoice = (ctx: ContextMessageUpdate) => {
-  const { message } = ctx;
-  const { text: category } = message;
+/**
+ * Triggered when category has been chosen.
+ * Check if its value is valid, and pass to the next step
+ * @param ctx
+ */
+export const onCategoryChoice = (ctx: QuiztitiContext) => {
+  const category = removeNonAlphanumericCharacters(ctx.message.text);
   if (checkIfCategoryExists(category)) {
+    console.log('Choosen category : ', category);
     quiz.category = category;
-    sendRoundChoiceMessage(ctx, category);
+    sendRoundChoiceMessage(ctx);
   }
 };
 
-const onRoundChoice = (ctx: ContextMessageUpdate) => {
-  if (checkIfRoundIsValid(ctx.message.text)) {
-    quiz.numberOfRounds = parseInt(ctx.message.text);
-    closeKeyboard(ctx, `${ctx.message.text} rounds : Let the Quiz begin !`);
-    setTimeout(() => startQuiz(ctx), 3000);
+/**
+ * Triggered when number of rounds has been chosen.
+ * Check if round value is valid, remove buttons from keyboard and start the quiz
+ * @param ctx
+ */
+export const onRoundChoice = (ctx: QuiztitiContext) => {
+  const round = removeNonAlphanumericCharacters(ctx.message.text);
+  if (checkIfRoundIsValid(round)) {
+    console.log('Choosen round : ', round);
+    quiz.numberOfRounds = round === INFINITE_ROUND ? -1 : parseInt(round);
+    ctx.closeKeyboard(getPartyBeginsMessage(ctx.message.text));
+    setTimeout(() => startQuiz(ctx), 1500);
   }
 };
 
-const startQuiz = (ctx: ContextMessageUpdate) => {
-  quiz.status = QuizStatus.WAITING;
-  quiz.questions = generateQuizQuestions(questionsDatabase, quiz);
-  console.log(quiz.questions);
+/**
+ * Start quiz by updating its status and calling for the next question
+ * @param ctx
+ */
+const startQuiz = (ctx: QuiztitiContext) => {
+  console.log('Quiz state at the beginning : ', quiz);
   quiz.status = QuizStatus.PLAYING;
   sendNextQuestion(ctx);
 };
 
+/**
+ * Reset all the data associated to the quiz, to be able to restart properly
+ */
 export const resetQuiz = () => {
   quiz = new Quiz();
   globalScore = {};
-  if (hintTimer) {
-    clearInterval(hintTimer);
-  }
-  if (nextQuestionTimer) {
-    clearTimeout(nextQuestionTimer);
-  }
+  clearInterval(hintTimer);
+  clearTimeout(nextQuestionTimer);
 };
 
-export const stopQuiz = (ctx: ContextMessageUpdate) => {
+export const stopQuiz = (ctx: QuiztitiContext) => {
   let scoreMessage: string = '';
   const sortedPlayers = Object.keys(globalScore).sort((a, b) => globalScore[b] - globalScore[a]);
   sortedPlayers.forEach(name => {
     scoreMessage += `${name} : ${globalScore[name]} point(s)\n`;
   });
-  ctx.replyWithHTML(`<b>Quiz is over ! Thanks for playing this awesome bot made by real professional !</b>\n\n${scoreMessage}`, Markup.removeKeyboard().extra());
+  ctx.replyWithHTML(getEndOfQuizMessage(scoreMessage), Markup.removeKeyboard().extra());
   resetQuiz();
 };
 
-const checkAnswer = (ctx: ContextMessageUpdate) => {
-  if (normalizeAnswer(ctx.message.text) === quiz.currentQuestion.normalizedAnswer) {
+/**
+ * Check if the given answer is matching with the question's answer.
+ * If it is, pass to the next question
+ * @param ctx
+ */
+const checkAnswer = (ctx: QuiztitiContext) => {
+  if (normalizeText(ctx.message.text) === quiz.currentQuestion.normalizedAnswer) {
     sendAnswerAndNextQuestion(ctx, true);
   }
 };
 
-const sendAnswerAndNextQuestion = (ctx: ContextMessageUpdate, success: boolean) => {
+const sendAnswerAndNextQuestion = (ctx: QuiztitiContext, success: boolean) => {
   quiz.status = QuizStatus.WAITING;
+  quiz.currentRound++;
   if (success) {
     handleSuccessMessage(ctx);
   } else {
     ctx.replyWithHTML(`Better luck next time ! The answer was :\n${quiz.currentQuestion.answer}\n`);
   }
-  if (hintTimer) {
-    clearInterval(hintTimer);
-  }
+  clearInterval(hintTimer);
   nextQuestionTimer = setTimeout(() => sendNextQuestion(ctx), 5000);
 };
 
-const handleSuccessMessage = (ctx: ContextMessageUpdate) => {
+const handleSuccessMessage = (ctx: QuiztitiContext) => {
   let score: number;
   switch (quiz.answerStatus) {
     case AnswerStatus.INVISIBLE:
@@ -149,21 +155,20 @@ const handleSuccessMessage = (ctx: ContextMessageUpdate) => {
   ctx.reply(`Well done ! The answer was : \n${quiz.currentQuestion.answer}\n\n${ctx.message.from.first_name} won ${score} point(s) !`);
 };
 
-const sendNextQuestion = (ctx: ContextMessageUpdate) => {
+const sendNextQuestion = (ctx: QuiztitiContext) => {
   quiz.status = QuizStatus.PLAYING;
   quiz.answerStatus = AnswerStatus.INVISIBLE;
-  if (quiz.currentRound <= quiz.numberOfRounds - 1) {
-    quiz.currentQuestion = quiz.questions[quiz.currentRound];
-    ctx.replyWithHTML(`Theme : ${quiz.currentQuestion.theme}\n
-<b>${quiz.currentQuestion.question}</b>`);
-    quiz.currentRound++;
+  if (quiz.numberOfRounds === -1 || quiz.currentRound <= quiz.numberOfRounds) {
+    quiz.currentQuestion = getRandomQuestion(questionsDatabase);
+    console.log(quiz.currentQuestion);
+    ctx.replyWithHTML(getQuestionMessage(quiz));
     sendHint(ctx);
   } else {
     stopQuiz(ctx);
   }
 };
 
-const generateHint = (ctx: ContextMessageUpdate) => {
+const generateHint = (ctx: QuiztitiContext) => {
   switch (quiz.answerStatus) {
     case AnswerStatus.INVISIBLE:
       replaceCharactersBySecret(quiz.currentQuestion);
@@ -178,23 +183,14 @@ const generateHint = (ctx: ContextMessageUpdate) => {
   }
 };
 
-const sendHint = (ctx: ContextMessageUpdate) => {
+const sendHint = (ctx: QuiztitiContext) => {
   hintTimer = setInterval(() => {
     if (quiz.answerStatus === AnswerStatus.SECOND_FILL) {
       sendAnswerAndNextQuestion(ctx, false);
     } else {
       generateHint(ctx);
-      ctx.replyWithHTML(
-        `Round ${quiz.currentRound}/${quiz.numberOfRounds}\n
-Theme : ${quiz.currentQuestion.theme}\n
-<b>${quiz.currentQuestion.question}</b>\n
-<i>${quiz.currentQuestion.hint}</i>`
-      );
+      ctx.replyWithHTML(getQuestionMessage(quiz));
       quiz.answerStatus = quiz.answerStatus + 1;
     }
   }, 20000);
-};
-
-const closeKeyboard = (ctx: ContextMessageUpdate, message: string) => {
-  ctx.reply(message, Markup.removeKeyboard().extra());
 };

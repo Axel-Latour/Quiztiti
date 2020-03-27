@@ -1,33 +1,33 @@
+/**
+ * Handle methods associated to the Question class.
+ * Manage data fetch from database, and fetch questions for the Quiz
+ */
+
 import { Question } from './models/Question';
-import { Quiz } from './models/Quiz';
+import { normalizeText } from './utils';
 
 const fs = require('fs');
 
+/**
+ * Read database.json content to fetch all the existing questions.
+ * Generate an Array of Question, with improvements on data quality
+ */
 export const fetchQuestionsFromDatabase = (): Question[] => {
   const databaseContent: string = fs.readFileSync('src/assets/database.json', 'utf8');
   if (databaseContent) {
     const usableQuestions: Question[] = JSON.parse(databaseContent)?.questions.filter(question => question.theme !== 'Anagramme');
     usableQuestions.forEach(question => {
-      // Normalize the answer to avoid accent issues when answering questions
+      // Replace dashes to avoid weird render when displaying hints
       question.answer = question.answer.replace('-', ' ');
-      question.normalizedAnswer = normalizeAnswer(question.answer);
+      // Normalize the answer to avoid accent issues when answering questions
+      question.normalizedAnswer = normalizeText(question.answer);
     });
     return usableQuestions;
   }
   return [];
 };
 
-export const generateQuizQuestions = (questionsDatabase: Question[], quiz: Quiz): Question[] => {
-  const questions: Question[] = [];
-  let randomIndex: number;
-
-  for (let i = 0; i < quiz.numberOfRounds; i++) {
-    randomIndex = Math.floor(Math.random() * (questionsDatabase.length));
-    questions.push(questionsDatabase[randomIndex]);
-  }
-  return questions;
-};
-
-export const normalizeAnswer = (answer: string): string => {
-  return answer.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+export const getRandomQuestion = (questionsDatabase: Question[]): Question => {
+  const randomIndex = Math.floor(Math.random() * (questionsDatabase.length));
+  return questionsDatabase[randomIndex];
 };
