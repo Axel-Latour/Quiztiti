@@ -12,6 +12,17 @@ import { QuiztitiContext } from './QuiztitiContext';
  */
 export const initializeBot = (bot) => {
 
+  bot.command('/start@helayxa_quiztiti_bot', (ctx) => {
+    console.log('/start command has been triggered');
+    resetQuiz();
+    sendCategoryChoiceMessage(ctx);
+  });
+
+  bot.command('stop@helayxa_quiztiti_bot', (ctx) => {
+    console.log('/stop command has been triggered');
+    stopQuiz(ctx);
+  });
+
   /**
    * Triggered when we launch the '/start' command from the chat.
    * Reset quiz data and start the quiz configuration
