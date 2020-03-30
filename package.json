@@ -12,7 +12,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "axios": "^0.19.2",
+    "dotenv": "^8.2.0",
     "fs": "0.0.1-security",
     "telegraf": "^3.36.0"
   },

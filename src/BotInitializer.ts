@@ -2,9 +2,11 @@
  * This file is used to handle all the code associated to the Telegram bot,
  * using the Telegraf library. All the triggers (like commands and message) are defined here.
  */
+import { IncomingMessage } from 'telegraf/typings/telegram-types';
 import { CATEGORY_PREFIX, ROUND_PREFIX } from './ButtonGenerator';
 import { handleMessage, onCategoryChoice, onRoundChoice, resetQuiz, sendCategoryChoiceMessage, stopQuiz } from './index';
 import { QuiztitiContext } from './QuiztitiContext';
+import { updatePlayerScore } from './ScoreHandler';
 
 /**
  * Initialize all the bot commands that we need to listen to
@@ -12,24 +14,20 @@ import { QuiztitiContext } from './QuiztitiContext';
  */
 export const initializeBot = (bot) => {
 
-  bot.command('/start@helayxa_quiztiti_bot', (ctx) => {
-    console.log('/start command has been triggered');
-    resetQuiz();
-    sendCategoryChoiceMessage(ctx);
-  });
-
-  bot.command('stop@helayxa_quiztiti_bot', (ctx) => {
-    console.log('/stop command has been triggered');
-    stopQuiz(ctx);
-  });
+  bot.context.quizData = {
+    scoreHandler: {
+      score: {},
+      updatePlayerScore: (score, message: IncomingMessage, scoreToAdd: number) => updatePlayerScore(score, message, scoreToAdd),
+    }
+  };
 
   /**
    * Triggered when we launch the '/start' command from the chat.
    * Reset quiz data and start the quiz configuration
    */
-  bot.command('/start', (ctx) => {
+  bot.command(['start', 'start@helayxa_quiztiti_bot'], (ctx) => {
     console.log('/start command has been triggered');
-    resetQuiz();
+    resetQuiz(ctx);
     sendCategoryChoiceMessage(ctx);
   });
 
@@ -37,7 +35,7 @@ export const initializeBot = (bot) => {
    * Triggered when we launch the '/stop' command from the chat.
    * Stop the current Quiz.
    */
-  bot.command('stop', (ctx) => {
+  bot.command(['stop', 'stop@helayxa_quiztiti_bot'], (ctx) => {
     console.log('/stop command has been triggered');
     stopQuiz(ctx);
   });
