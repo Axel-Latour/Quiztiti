@@ -3,8 +3,8 @@
  * using the Telegraf library. All the triggers (like commands and message) are defined here.
  */
 import { IncomingMessage } from 'telegraf/typings/telegram-types';
+import { handleMessage, onCategoryChoice, onRoundChoice, resetQuiz, sendCategoryChoiceMessage, stopQuiz } from './app';
 import { CATEGORY_PREFIX, ROUND_PREFIX } from './ButtonGenerator';
-import { handleMessage, onCategoryChoice, onRoundChoice, resetQuiz, sendCategoryChoiceMessage, stopQuiz } from './index';
 import { QuiztitiContext } from './QuiztitiContext';
 import { updatePlayerScore } from './ScoreHandler';
 
