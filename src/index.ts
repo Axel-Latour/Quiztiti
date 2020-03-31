@@ -39,6 +39,7 @@ export const handleMessage = (ctx: QuiztitiContext) => {
  */
 export const sendCategoryChoiceMessage = (ctx: QuiztitiContext) => {
   ctx.replyWithCategoryChoice();
+  quiz.status = QuizStatus.CHOOSING_CATEGORY;
 };
 
 /**
@@ -56,11 +57,14 @@ const sendRoundChoiceMessage = (ctx: QuiztitiContext) => {
  * @param ctx
  */
 export const onCategoryChoice = (ctx: QuiztitiContext) => {
-  const category = removeNonAlphanumericCharacters(ctx.message.text);
-  if (checkIfCategoryExists(category)) {
-    console.log('Choosen category : ', category);
-    quiz.category = category;
-    sendRoundChoiceMessage(ctx);
+  // This condition is needed for concurrent start
+  if (quiz.status === QuizStatus.CHOOSING_CATEGORY) {
+    const category = removeNonAlphanumericCharacters(ctx.message.text);
+    if (checkIfCategoryExists(category)) {
+      console.log('Choosen category : ', category);
+      quiz.category = category;
+      sendRoundChoiceMessage(ctx);
+    }
   }
 };
 
@@ -70,12 +74,16 @@ export const onCategoryChoice = (ctx: QuiztitiContext) => {
  * @param ctx
  */
 export const onRoundChoice = (ctx: QuiztitiContext) => {
-  const round = removeNonAlphanumericCharacters(ctx.message.text);
-  if (checkIfRoundIsValid(round)) {
-    console.log('Choosen round : ', round);
-    quiz.numberOfRounds = round === INFINITE_ROUND ? -1 : parseInt(round);
-    ctx.closeKeyboard(getPartyBeginsMessage(ctx.message.text));
-    quizStartTimer = setTimeout(() => startQuiz(ctx), 1500);
+  // This condition is needed for concurrent start
+  if (quiz.status === QuizStatus.CHOOSING_ROUND) {
+    const round = removeNonAlphanumericCharacters(ctx.message.text);
+    if (checkIfRoundIsValid(round)) {
+      console.log('Choosen round : ', round);
+      quiz.numberOfRounds = round === INFINITE_ROUND ? -1 : parseInt(round);
+      ctx.closeKeyboard(getPartyBeginsMessage(ctx.message.text));
+      clearTimeout(quizStartTimer);
+      quizStartTimer = setTimeout(() => startQuiz(ctx), 2000);
+    }
   }
 };
 
@@ -104,10 +112,14 @@ export const resetQuiz = (ctx: QuiztitiContext) => {
  * Stop the current quiz, by resetting all the global data and sending
  * the appropriate message
  * @param ctx
+ * @param restartNewQuiz true if a new quiz must be started at the end of the current one
  */
-export const stopQuiz = (ctx: QuiztitiContext) => {
+export const stopQuiz = (ctx: QuiztitiContext, restartNewQuiz: boolean = false) => {
   ctx.replyEndOfQuiz(ctx.quizData.scoreHandler.score);
   resetQuiz(ctx);
+  if (restartNewQuiz) {
+    sendCategoryChoiceMessage(ctx);
+  }
 };
 
 /**
@@ -125,7 +137,7 @@ const checkAnswer = (ctx: QuiztitiContext) => {
  * Update quiz data when changing question, send the message containing the answer
  * and wait a bit before sending the next question
  * @param ctx
- * @param success : true if answer was found
+ * @param success true if answer was found
  */
 const sendAnswerAndNextQuestion = (ctx: QuiztitiContext, success: boolean) => {
   // Need to have a special status, to avoid treating answers while waiting for the next question (after answer reception)
@@ -169,7 +181,7 @@ const sendNextQuestion = (ctx: QuiztitiContext) => {
     ctx.replyWithQuestion(quiz);
     sendHint(ctx);
   } else {
-    stopQuiz(ctx);
+    stopQuiz(ctx, true);
   }
 };
 

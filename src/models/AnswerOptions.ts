@@ -14,7 +14,7 @@ export class AnswerOptions {
 export const ANSWER_OPTIONS: { [key: string]: AnswerOptions } = {
   INVISIBLE: {
     status: AnswerStatus.INVISIBLE,
-    timeBeforeNextStep: 10000,
+    timeBeforeNextStep: 12500,
     score: 5,
   },
   VISIBLE: {

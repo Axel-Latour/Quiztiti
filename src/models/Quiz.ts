@@ -3,7 +3,7 @@ import { Question } from './Question';
 import { QuizStatus } from './QuizStatus';
 
 export class Quiz {
-  status: QuizStatus = QuizStatus.CHOOSING_ROUND;
+  status: QuizStatus = QuizStatus.CHOOSING_CATEGORY;
   category: string;
   numberOfRounds: number;
   currentRound: number = 1;
