@@ -8,7 +8,7 @@ import { normalizeText } from './utils';
 
 const fs = require('fs');
 
-const categoriesToExclude: string[] = ['Anagramme', 'Football', 'Allemand'];
+const categoriesToExclude: string[] = ['Anagramme', 'Football', 'Allemand', 'Calcul Départements'];
 
 /**
  * Read database.json content to fetch all the existing questions.
