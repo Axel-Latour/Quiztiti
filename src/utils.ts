@@ -10,5 +10,10 @@ export const removeNonAlphanumericCharacters = (text: string) => text.replace(/[
  * @param text
  */
 export const normalizeText = (text: string): string => {
-  return text.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  return text
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace('’', '\'') // specific for Apple apostrophe
+    .replace(/[\u0300-\u036f]/g, '');
 };
